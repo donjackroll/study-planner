@@ -1,3 +1,48 @@
+.dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.animated-select.small {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-size: 14px; /* 🔹 Nhỏ gọn hơn */
+  padding: 8px 20px; /* 🔹 Thu hẹp padding */
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white url("data:image/svg+xml;charset=UTF-8,<svg fill='%23667eea' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 10px center;
+  background-size: 10px; /* 🔹 Nhỏ icon lại */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  color: #333;
+}
+
+/* Hover effect */
+.animated-select.small:hover {
+  border-color: #5c7cfa;
+  box-shadow: 0 3px 6px rgba(92, 124, 250, 0.15);
+}
+
+/* Focus effect */
+.animated-select.small:focus {
+  outline: none;
+  border-color: #5c7cfa;
+  box-shadow: 0 0 6px rgba(92, 124, 250, 0.3);
+}
+
+/* Option style */
+.animated-select.small option {
+  padding: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.animated-select.small option:hover {
+  background-color: #edf2ff;
+}
+
 :root {
   --primary: #a3c9f9;
   --secondary: #f7d9e3;
