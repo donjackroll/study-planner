@@ -1,0 +1,31 @@
+/* --- src/pages/Login.css --- */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* loại bỏ viền trắng */
+}
+
+/* Nền động mượt, full màn hình */
+.login-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(135deg, #c2e9fb, #a1c4fd, #b9deed, #e2ebf0);
+  background-size: 400% 400%;
+
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 100%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 100%; }
+}
