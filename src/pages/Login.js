@@ -1,15 +1,12 @@
-// src/pages/Login.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "../firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
 } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import "./Login.css";
@@ -24,6 +21,7 @@ export default function Login() {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
+  const [showAltMethods, setShowAltMethods] = useState(false); // 👈 Hiển thị bảng phụ
   const navigate = useNavigate();
 
   const showToast = (msg) => {
@@ -31,7 +29,7 @@ export default function Login() {
     setTimeout(() => setToast(""), 3000);
   };
 
-  // ----------------- Email Login -----------------
+  // ---------------- Email login ----------------
   const handleLogin = async () => {
     try {
       if (!email || !password) throw new Error("Nhập email & mật khẩu!");
@@ -67,7 +65,7 @@ export default function Login() {
     }
   };
 
-  // ----------------- Google Login -----------------
+  // ---------------- Google login ----------------
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -79,22 +77,33 @@ export default function Login() {
     }
   };
 
-  // ----------------- Phone Login -----------------
+  // ---------------- Phone login ----------------
   const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        "recaptcha-container",
-        { size: "invisible" },
-        auth
-      );
+    // Xóa recaptcha cũ (nếu có)
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {
+        console.warn("recaptchaVerifier clear error:", e);
+      }
     }
+
+    window.recaptchaVerifier = new RecaptchaVerifier(
+      auth,
+      "recaptcha-container",
+      {
+        size: "invisible",
+        callback: (response) => console.log("✅ reCAPTCHA verified:", response),
+      }
+    );
   };
 
   const sendOTP = async () => {
     try {
       if (!phone) throw new Error("Nhập số điện thoại!");
       setupRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      const appVerifier = window.recaptchaVerifier;
+      const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
       setConfirmationResult(confirmation);
       showToast("✅ OTP đã được gửi!");
     } catch (err) {
@@ -117,6 +126,7 @@ export default function Login() {
     <div className="login-background">
       <div id="recaptcha-container"></div>
 
+      {/* Toast message */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -131,41 +141,121 @@ export default function Login() {
         )}
       </AnimatePresence>
 
-      <motion.div className="login-card" initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+      {/* Main Card */}
+      <motion.div
+        className="login-card"
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+      >
         <h1>🎓 Study Planner</h1>
 
-        {!isRegistered ? (
-          <>
-            <div className="form-container">
-              <input type="email" placeholder="Email..." value={email} onChange={e => setEmail(e.target.value)} />
-              <input type="password" placeholder="Mật khẩu..." value={password} onChange={e => setPassword(e.target.value)} />
-              <p className="error">{error}</p>
-              <button onClick={handleLogin} className="login">Đăng nhập</button>
-              <button onClick={handleRegister} className="register">Đăng ký</button>
-              <button onClick={handleGoogleLogin} className="google">Google Login</button>
-            </div>
+        <AnimatePresence mode="wait">
+          {!showAltMethods ? (
+            // ================= EMAIL FORM =================
+            <motion.div
+              key="email"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -40 }}
+              transition={{ duration: 0.4 }}
+              className="form-container"
+            >
+              {!isRegistered ? (
+                <>
+                  <input
+                    type="email"
+                    placeholder="Email..."
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Mật khẩu..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <p className="error">{error}</p>
+                  <button onClick={handleLogin} className="login">
+                    Đăng nhập
+                  </button>
+                  <button onClick={handleRegister} className="register">
+                    Đăng ký
+                  </button>
 
-            <hr />
-
-            <div className="phone-container">
-              <input type="text" placeholder="Số điện thoại (+84...)" value={phone} onChange={e => setPhone(e.target.value)} />
-              {!confirmationResult ? (
-                <button onClick={sendOTP} className="login">Gửi OTP</button>
+                  <button
+                    className="alt-btn"
+                    onClick={() => setShowAltMethods(true)}
+                  >
+                    🔄 Phương thức đăng nhập khác
+                  </button>
+                </>
               ) : (
                 <>
-                  <input type="text" placeholder="Nhập OTP" value={otp} onChange={e => setOtp(e.target.value)} />
-                  <button onClick={verifyOTP} className="login">Xác nhận OTP</button>
+                  <h3>Tài khoản đã được tạo!</h3>
+                  <input
+                    type="text"
+                    placeholder="Tên hiển thị..."
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                  <button onClick={handleSetName} className="login">
+                    Lưu tên hiển thị
+                  </button>
                 </>
               )}
-            </div>
-          </>
-        ) : (
-          <div className="form-container">
-            <h3>Tài khoản đã được tạo!</h3>
-            <input type="text" placeholder="Tên hiển thị..." value={displayName} onChange={e => setDisplayName(e.target.value)} />
-            <button onClick={handleSetName} className="login">Lưu tên hiển thị</button>
-          </div>
-        )}
+            </motion.div>
+          ) : (
+            // ================= OTHER LOGIN FORM =================
+            <motion.div
+              key="alt"
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -80 }}
+              transition={{ duration: 0.4 }}
+              className="form-container"
+            >
+              <h3>Phương thức đăng nhập khác</h3>
+
+              {/* Google Login */}
+              <button onClick={handleGoogleLogin} className="google">
+                Đăng nhập với Google
+              </button>
+
+              {/* Phone Login */}
+              <input
+                type="text"
+                placeholder="Số điện thoại (+84...)"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              {!confirmationResult ? (
+                <button onClick={sendOTP} className="login">
+                  Gửi OTP
+                </button>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Nhập OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                  />
+                  <button onClick={verifyOTP} className="login">
+                    Xác nhận OTP
+                  </button>
+                </>
+              )}
+
+              <button
+                className="alt-btn"
+                onClick={() => setShowAltMethods(false)}
+              >
+                ⬅ Quay lại Email / Mật khẩu
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
