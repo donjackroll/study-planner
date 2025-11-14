@@ -1,3 +1,4 @@
+// Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "../firebase";
@@ -21,7 +22,7 @@ export default function Login() {
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
-  const [showAltMethods, setShowAltMethods] = useState(false); // 👈 Hiển thị bảng phụ
+  const [showAltMethods, setShowAltMethods] = useState(false);
   const navigate = useNavigate();
 
   const showToast = (msg) => {
@@ -77,53 +78,88 @@ export default function Login() {
     }
   };
 
-  // ---------------- Phone login ----------------
+  // ---------------- Phone login (production) ----------------
   const setupRecaptcha = () => {
-    // Xóa recaptcha cũ (nếu có)
-    if (window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier.clear();
-      } catch (e) {
-        console.warn("recaptchaVerifier clear error:", e);
-      }
-    }
+    // Tạo recaptcha duy nhất, dùng lại nhiều lần (best practice cho production)
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "invisible", // có thể đổi thành 'normal' để test dễ hơn
+          callback: (response) => {
+            console.log("✅ reCAPTCHA verified:", response);
+          },
+          "expired-callback": () => {
+            console.log("⚠️ reCAPTCHA expired, sẽ tạo lại.");
+            window.recaptchaVerifier = null;
+          },
+        }
+      );
 
-    window.recaptchaVerifier = new RecaptchaVerifier(
-      auth,
-      "recaptcha-container",
-      {
-        size: "invisible",
-        callback: (response) => console.log("✅ reCAPTCHA verified:", response),
-      }
-    );
+      // BẮT BUỘC: render() để recaptcha hoạt động ổn định trên production
+      window.recaptchaVerifier.render().catch((e) => {
+        console.error("render recaptcha error:", e);
+      });
+    }
+  };
+
+  const formatPhone = (raw) => {
+    let p = raw.trim();
+    // Nếu user nhập 0xxxxxxxx thì chuyển thành +84xxxxxxxx
+    if (p.startsWith("0")) {
+      p = "+84" + p.slice(1);
+    }
+    // Nếu đã có +84 thì giữ nguyên
+    return p;
   };
 
   const sendOTP = async () => {
     try {
+      setError("");
       if (!phone) throw new Error("Nhập số điện thoại!");
+
+      const phoneNumber = formatPhone(phone);
+
+      // Điều kiện: phone phải là E.164 (+84...)
+      if (!phoneNumber.startsWith("+")) {
+        throw new Error("Số điện thoại phải có mã vùng, ví dụ: +84...");
+      }
+
       setupRecaptcha();
       const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
+
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        appVerifier
+      );
       setConfirmationResult(confirmation);
       showToast("✅ OTP đã được gửi!");
     } catch (err) {
+      console.error(err);
       setError("❌ Lỗi khi gửi OTP: " + err.message);
     }
   };
 
   const verifyOTP = async () => {
     try {
+      setError("");
       if (!otp) throw new Error("Nhập mã OTP!");
+      if (!confirmationResult) throw new Error("Chưa gửi OTP!");
+
       await confirmationResult.confirm(otp);
       showToast("✅ Đăng nhập bằng số điện thoại thành công!");
       setTimeout(() => navigate("/plan"), 800);
     } catch (err) {
+      console.error(err);
       setError("❌ OTP không đúng: " + err.message);
     }
   };
 
   return (
     <div className="login-background">
+      {/* Container recaptcha – phải tồn tại trong DOM */}
       <div id="recaptcha-container"></div>
 
       {/* Toast message */}
@@ -225,7 +261,7 @@ export default function Login() {
               {/* Phone Login */}
               <input
                 type="text"
-                placeholder="Số điện thoại (+84...)"
+                placeholder="Số điện thoại (vd: 0912..., +84912...)"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
@@ -246,6 +282,8 @@ export default function Login() {
                   </button>
                 </>
               )}
+
+              <p className="error">{error}</p>
 
               <button
                 className="alt-btn"
