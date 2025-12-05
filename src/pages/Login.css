@@ -146,9 +146,15 @@ button:hover { opacity: 0.9; }
    ERROR TEXT
    ========================================================== */
 .error {
-  text-align: center;
-  color: #e74c3c;
-  font-size: 0.9rem;
+  color: #e20909;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  font-weight: bold;
+  font-size: 16px;
+  font-family: "SVN-VT-Redzone-Classic", sans-serif;
+  display: block; /* Đảm bảo hiển thị thông báo */
+
 }
 
 /* ==========================================================
@@ -169,11 +175,20 @@ button:hover { opacity: 0.9; }
     font-size: 1.5rem;
     font-family: "SVN-DeliveryNote", sans-serif;
   }
+
+  h3{
+    font-size: 22px;
+    font-family: "SVN-DeliveryNote";
+  }
 }
 
 @media (min-width: 1200px) {
   /* PC lớn — giữ layout đẹp, không bị giãn quá mức */
   .login-card {
     width: 420px;
+  }
+   h3{
+    font-size: 21px;
+    font-family: "SVN-VT-Redzone-Classic";
   }
 }

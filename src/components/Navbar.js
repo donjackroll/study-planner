@@ -42,7 +42,7 @@ export default function Navbar() {
       <div className="nav-right desktop-menu">
         <Link to="/plan">📘 Lên Kế Hoạch</Link>
         <Link to="/stats">📊 Thống Kê</Link>
-        <button className="logout-btn" onClick={logout}>🚪 Đăng Xuất</button>
+        <button className="nav-logout" onClick={logout}>🚪 Đăng Xuất</button>
       </div>
     </div>
 

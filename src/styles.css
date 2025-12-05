@@ -287,3 +287,19 @@ td:nth-child(4) {
     overflow-x: hidden;
   }
 }
+
+/* Trạng thái chưa hoàn thành - Màu đỏ */
+.status-pending {
+  color: #ff0019;
+
+}
+
+/* Trạng thái đã hoàn thành - Màu xanh */
+.status-done {
+  color: #5fac71;
+
+}
+
+
+
+

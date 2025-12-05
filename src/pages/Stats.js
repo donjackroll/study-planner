@@ -13,6 +13,7 @@ export default function Stats() {
   const [selectedDay, setSelectedDay] = useState("Tổng kết");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // Lấy dữ liệu từ Firebase
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (u) => {
       if (u) {
@@ -39,7 +40,44 @@ export default function Stats() {
     return () => unsubAuth();
   }, []);
 
-  // Tổng kết data theo môn
+  // Nhóm dữ liệu theo ngày và môn học, cộng dồn thời gian học cho mỗi môn trong ngày
+  const groupedByDayAndSubject = useMemo(() => {
+    const grouped = tasks.reduce((acc, t) => {
+      // Nếu ngày chưa có, tạo mới
+      if (!acc[t.day]) acc[t.day] = {};
+      // Cộng dồn thời gian học cho môn học cùng ngày
+      acc[t.day][t.subject] = (acc[t.day][t.subject] || 0) + t.time;
+      return acc;
+    }, {});
+
+    // Chuyển dữ liệu từ object thành array để dễ xử lý
+    return Object.entries(grouped).map(([day, subjects]) => {
+      const subjectsData = Object.entries(subjects).map(([subject, time]) => ({
+        name: subject,
+        value: time,
+        day: day
+      }));
+      return subjectsData;
+    });
+  }, [tasks]);
+
+  // Lọc dữ liệu theo ngày đã chọn
+  const filteredData = useMemo(() => {
+    if (selectedDay === "Tổng kết") {
+      return groupedByDayAndSubject.flat(); // Gộp tất cả dữ liệu lại cho Tổng kết
+    } else {
+      // Lọc theo ngày đã chọn
+      return groupedByDayAndSubject.find(dayData => dayData[0].day === selectedDay) || [];
+    }
+  }, [selectedDay, groupedByDayAndSubject]);
+
+  // Danh sách các ngày có dữ liệu
+  const daysList = useMemo(() => {
+    const set = new Set(tasks.map((t) => t.day).filter(Boolean));
+    return Array.from(set);
+  }, [tasks]);
+
+  // Dữ liệu tổng kết theo môn học
   const totalData = useMemo(() => {
     const grouped = tasks.reduce((acc, t) => {
       if (t.subject) acc[t.subject] = (acc[t.subject] || 0) + t.time;
@@ -48,13 +86,6 @@ export default function Stats() {
     return Object.entries(grouped).map(([name, value]) => ({ name, value }));
   }, [tasks]);
 
-  // Danh sách các ngày có dữ liệu
-  const daysList = useMemo(() => {
-    const set = new Set(tasks.map((t) => t.day).filter(Boolean));
-    return Array.from(set);
-  }, [tasks]);
-
-  // Dữ liệu theo ngày được chọn
   const selectedData =
     selectedDay === "Tổng kết"
       ? totalData
@@ -70,7 +101,7 @@ export default function Stats() {
       ? totalData
       : Object.entries(selectedData).map(([name, value]) => ({ name, value }));
 
-  // 🟢 Biểu đồ “Đã hoàn thành / Chưa hoàn thành”
+  // Biểu đồ “Đã hoàn thành / Chưa hoàn thành”
   const completionData = useMemo(() => {
     const filtered =
       selectedDay === "Tổng kết"

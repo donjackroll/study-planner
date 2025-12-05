@@ -1,4 +1,3 @@
-// Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "../firebase";
@@ -23,6 +22,7 @@ export default function Login() {
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
   const [showAltMethods, setShowAltMethods] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
   const navigate = useNavigate();
 
   const showToast = (msg) => {
@@ -31,25 +31,64 @@ export default function Login() {
   };
 
   // ---------------- Email login ----------------
-  const handleLogin = async () => {
-    try {
-      if (!email || !password) throw new Error("Nhập email & mật khẩu!");
-      await signInWithEmailAndPassword(auth, email, password);
-      showToast("✅ Đăng nhập thành công!");
-      setTimeout(() => navigate("/plan"), 800);
-    } catch (err) {
-      setError(err.message);
-    }
+const handleLogin = async () => {
+  try {
+    if (!email || !password) throw new Error("Vui lòng nhập email và mật khẩu!");
+    await signInWithEmailAndPassword(auth, email, password);
+    setError("");  // Reset lỗi khi đăng nhập thành công
+    setIsLoading(false);
+    showToast("✅ Đăng nhập thành công!");
+    setTimeout(() => navigate("/plan"), 800);
+  } catch (err) {
+    setIsLoading(false);
+    const errorMessage = handleFirebaseError(err.code); // Hiển thị lỗi từ Firebase
+    setError(errorMessage);
+    console.error(err);  // Log detailed error for debugging
+  }
+};
+  const handleFirebaseError = (errorCode) => {
+    const errorMessages = {
+    "auth/invalid-email": "Địa chỉ email không hợp lệ.",
+    "auth/user-disabled": "Người dùng bị vô hiệu hóa.",
+    "auth/user-not-found": "Không tìm thấy người dùng với thông tin này.",
+    "auth/wrong-password": "Mật khẩu không đúng.",
+    "auth/weak-password": "Mật khẩu quá yếu.",
+    "auth/email-already-in-use": "Email này đã được sử dụng.",
+    "auth/operation-not-allowed": "Phương thức đăng nhập chưa được bật.",
+    "auth/account-exists-with-different-credential": "Tài khoản đã tồn tại với thông tin xác thực khác.",
+    "auth/credential-already-in-use": "Thông tin xác thực đã được sử dụng với tài khoản khác.",
+    "auth/requires-recent-login": "Tài khoản yêu cầu đăng nhập gần đây.",
+    "auth/invalid-credential": "Thông tin xác thực không hợp lệ.",
+    "auth/invalid-verification-code": "Mã xác minh không hợp lệ.",
+    "auth/invalid-verification-id": "ID xác minh không hợp lệ.",
+    "auth/expired-action-code": "Mã hành động đã hết hạn.",
+    "auth/code-expired": "Mã xác minh đã hết hạn.",
+    "auth/too-many-requests": "Quá nhiều yêu cầu, vui lòng thử lại sau.",
+    "auth/invalid-api-key": "Vui lòng liên hệ Admin(invalid-api-key)",
+    "auth/user-token-expired": "Vui lòng liên hệ Admin(user-token-expired)",
+    "auth/network-request-failed": "Lỗi kết nối mạng.",
+    "auth/too-many-redirects": "Quá nhiều lần chuyển hướng.",
+    "auth/missing-phone-number": "Thiếu số điện thoại khi gửi yêu cầu SMS.",
+    "auth/phone-number-already-exists": "Số điện thoại này đã tồn tại.",
+    "auth/invalid-phone-number": "Số điện thoại không hợp lệ.",
+    "auth/popup-closed-by-user":"Lỗi đăng nhập , vui lòng không đóng/chặn pop up",
+      // Thêm các mã lỗi khác của Firebase nếu cần
+    };
+    return errorMessages[errorCode] || "Vui lòng nhập email và mật khẩu"; // Nếu không có mã lỗi, hiển thị thông báo mặc định
   };
 
   const handleRegister = async () => {
     try {
       if (!email || !password) throw new Error("Nhập email & mật khẩu!");
+      setIsLoading(true);
       await createUserWithEmailAndPassword(auth, email, password);
       setIsRegistered(true);
+      setIsLoading(false);
       showToast("🎉 Tạo tài khoản thành công!");
     } catch (err) {
-      setError(err.message);
+      setIsLoading(false);
+      const errorMessage = handleFirebaseError(err.code);
+      setError(errorMessage);
     }
   };
 
@@ -74,7 +113,8 @@ export default function Login() {
       showToast("✅ Đăng nhập Google thành công!");
       setTimeout(() => navigate("/plan"), 800);
     } catch (err) {
-      setError(err.message);
+      const errorMessage = handleFirebaseError(err.code);
+      setError(errorMessage);
     }
   };
 
@@ -184,7 +224,6 @@ export default function Login() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 15 }}
       >
-        
         <h1>🎓 STUDY PLANNER </h1>
 
         <AnimatePresence mode="wait">
@@ -212,7 +251,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
-                  <p className="error">{error}</p>
+                  {error && <p className="error">{error}</p>}
                   <button onClick={handleLogin} className="login">
                     Đăng nhập
                   </button>
@@ -284,7 +323,7 @@ export default function Login() {
                 </>
               )}
 
-              <p className="error">{error}</p>
+              {error && <p className="error">{error}</p>}
 
               <button
                 className="alt-btn"
