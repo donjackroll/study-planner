@@ -184,7 +184,8 @@ export default function Login() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 15 }}
       >
-        <h1>🎓 Study Planner</h1>
+        
+        <h1>🎓 STUDY PLANNER </h1>
 
         <AnimatePresence mode="wait">
           {!showAltMethods ? (

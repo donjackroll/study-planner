@@ -1,0 +1,70 @@
+/* ===== GLOBAL RESPONSIVE ENGINE ===== */
+
+/* font + zoom fix mọi trình duyệt */
+html {
+  font-size: clamp(14px, 1.3vw, 18px);
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* spacing chuẩn */
+body {
+  margin: 0;
+  font-family: system-ui, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+/* container chuẩn */
+.page,
+.plan-container,
+.login-card {
+  width: min(1100px, 95%);
+  margin: auto;
+}
+
+/* responsive flex */
+.r-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* responsive grid */
+.r-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+/* table responsive */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+  .form {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  input, button { font-size: 0.9rem; }
+}
+
+/* safari blur fix */
+.blur-card {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* safari input zoom fix */
+input, select, textarea {
+  font-size: 16px;
+}

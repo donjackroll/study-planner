@@ -1,97 +1,179 @@
-/* --- src/pages/Login.css --- */
+/* ==========================================================
+   LOGIN PAGE — RESPONSIVE + SAFARI COMPATIBLE + GLASS UI
+   ========================================================== */
 
-.login-background {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg,#667eea,#764ba2);
-  padding: 20px;
-}
-
-.login-card {
-  background: rgba(255,255,255,0.95);
-  padding: 40px 30px;
-  border-radius: 20px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-}
-
-.form-container,
-.phone-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  outline: none;
+/* RESET + FONT SMOOTHING */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
-button {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  transition: 0.3s;
+html {
+  /* Ngăn Safari zoom khi focus input */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-button.login { background-color: #4caf50; color: white; }
-button.register { background-color: #667eea; color: white; }
-button.google { background-color: #ea4335; color: white; }
-
-button:hover { opacity: 0.9; }
-
-hr {
-  margin: 20px 0;
-  border: 0;
-  height: 1px;
-  background: #ccc;
+body {
+  font-family: "Poppins", sans-serif;
+  overflow-x: hidden;
 }
 
-.error {
-  color: red;
-  font-size: 14px;
-}
-
-
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden; /* loại bỏ viền trắng */
-}
-
-/* Nền động mượt, full màn hình */
+/* ==========================================================
+   BACKGROUND FULL SCREEN
+   ========================================================== */
 .login-background {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "SVN-LumiosMarker", sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
 
   background: linear-gradient(135deg, #c2e9fb, #a1c4fd, #b9deed, #e2ebf0);
-  background-size: 400% 400%;
+  background-size: 300% 300%;
 
+  animation: bgMove 12s ease infinite;
 }
 
-@keyframes gradientBG {
-  0% { background-position: 0% 100%; }
-  50% { background-position: 100% 100%; }
-  100% { background-position: 0% 100%; }
+@keyframes bgMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ==========================================================
+   LOGIN CARD (RESPONSIVE + GLASS EFFECT)
+   ========================================================== */
+.login-card {
+  width: 100%;
+  max-width: 420px;   /* Giảm từ 500–600px xuống còn 420px */
+  padding: 28px 24px; /* Thu nhỏ khoảng cách bên trong */
+  
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================
+   FORM AREA
+   ========================================================== */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* INPUT */
+input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 2px solid #ddd;
+  width: 100%;
+
+  font-size: clamp(14px, 1vw, 16px);
+
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus {
+  border-color: #6c63ff;
+  outline: none;
+  box-shadow: 0 0 4px rgba(108, 99, 255, 0.3);
+}
+
+/* BUTTON */
+button {
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  font-size: clamp(14px, 1vw, 16px);
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+button.login { background: #6c63ff; color: #fff; }
+button.register { background: #f39c12; color: #fff; }
+button.google { background: #db4437; color: #fff; }
+
+button:hover { opacity: 0.9; }
+
+/* ==========================================================
+   TOAST
+   ========================================================== */
+.toast {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 12px 20px;
+  background: #27ae60;
+  color: #fff;
+
+  border-radius: 10px;
+  font-size: 1rem;
+
+  z-index: 999;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ==========================================================
+   ERROR TEXT
+   ========================================================== */
+.error {
+  text-align: center;
+  color: #e74c3c;
+  font-size: 0.9rem;
+}
+
+/* ==========================================================
+   RESPONSIVE FIXES (MOBILE / TABLET)
+   ========================================================== */
+@media (max-width: 420px) {
+  .login-card {
+    padding: 22px 16px;
+    border-radius: 14px;
+  }
+
+  input,
+  button {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-family: "SVN-DeliveryNote", sans-serif;
+  }
+}
+
+@media (min-width: 1200px) {
+  /* PC lớn — giữ layout đẹp, không bị giãn quá mức */
+  .login-card {
+    width: 420px;
+  }
 }

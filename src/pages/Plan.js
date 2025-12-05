@@ -11,287 +11,197 @@ export default function Plan() {
   const [tasks, setTasks] = useState([]);
   const [subject, setSubject] = useState("");
   const [time, setTime] = useState("");
-  const [day, setDay] = useState("");
+
+  // 🔥 MULTI SELECT: day phải là array
+  const [day, setDay] = useState([]);
+
   const [user, setUser] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const navigate = useNavigate();
 
-useEffect(() => {
-  const u = auth.currentUser;
-  if (u) {
-    setUser(u); // lấy avatar từ Google nếu đăng nhập bằng Google
-  }
+  // 🌙 DARK MODE (nút đã xóa khỏi UI)
+  const [darkMode, setDarkMode] = useState(localStorage.getItem("dm") === "1");
 
-  const unsubAuth = onAuthStateChanged(auth, (u) => {
-    if (u) {
-      setUser(u);
-      // load tasks
-      const docRef = doc(db, "tasks", u.uid);
-      const unsubSnap = onSnapshot(docRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const userTasks = Array.isArray(data.tasks)
-            ? data.tasks.map(t => ({ ...t, time: Number(t.time) || 0 }))
-            : [];
-          setTasks(userTasks);
-        } else {
-          setTasks([]);
-        }
-      });
-      return () => unsubSnap();
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("dm", "1");
     } else {
-      setUser(null);
-      navigate("/");
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("dm", "0");
     }
-  });
+  }, [darkMode]);
 
-  return () => unsubAuth();
-}, [navigate]);
+  // 🔥 LOAD USER + TASKS
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        navigate("/");
+        return;
+      }
+      setUser(u);
 
+      const docRef = doc(db, "tasks", u.uid);
+      return onSnapshot(docRef, (snap) => {
+        if (snap.exists()) {
+          const arr = Array.isArray(snap.data().tasks)
+            ? snap.data().tasks.map((t) => ({
+                ...t,
+                time: Number(t.time),
+                day: Array.isArray(t.day) ? t.day : [t.day], // luôn là array
+              }))
+            : [];
+          setTasks(arr);
+        } else setTasks([]);
+      });
+    });
 
-  const saveTasksToFirestore = async (updatedTasks) => {
-    if (!user?.uid) return;
-    try {
-      const docRef = doc(db, "tasks", user.uid);
-      await setDoc(docRef, { tasks: updatedTasks });
-    } catch (err) {
-      console.error("Save tasks error:", err);
-    }
+    return () => unsub();
+  }, [navigate]);
+
+  // SAVE
+  const saveTasksToFirestore = async (arr) => {
+    if (!user) return;
+    await setDoc(doc(db, "tasks", user.uid), { tasks: arr });
   };
 
+  // ADD TASK
   const addTask = async () => {
-    if (!subject || !time || !day) return;
-    const newTask = { id: Date.now(), day, subject, time, completed: false };
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    await saveTasksToFirestore(updatedTasks);
-    setSubject("");
-    setTime("");
-    setDay("");
-  };
+  if (!subject || !time || day.length === 0) return;
 
-  const toggleStatus = async (id) => {
-    const updatedTasks = tasks.map((t) =>
-      t.id === id ? { ...t, completed: !t.completed } : t
-    );
-    setTasks(updatedTasks);
-    await saveTasksToFirestore(updatedTasks);
-  };
+  // Tạo nhiều task – mỗi ngày là một item riêng
+  const newTasks = day.map(d => ({
+    id: Date.now() + Math.random(), // tránh trùng id
+    day: d,            // mỗi task chỉ 1 thứ
+    subject,
+    time,
+    completed: false,
+  }));
 
-  const deleteTask = async (id) => {
-    const updatedTasks = tasks.filter((t) => t.id !== id);
-    setTasks(updatedTasks);
-    await saveTasksToFirestore(updatedTasks);
-  };
+  const updated = [...tasks, ...newTasks];
+  setTasks(updated);
+  await saveTasksToFirestore(updated);
 
-  const handleLogout = async () => {
-    try { await auth.signOut(); } catch {}
-    localStorage.removeItem("user");
-    navigate("/");
-  };
-
-const handleAvatarChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!["image/jpeg", "image/png", "image/gif", "image/jpg"].includes(file.type)) {
-    alert("Vui lòng chọn file ảnh hợp lệ (.jpg, .jpeg, .png, .gif)");
-    return;
-  }
-  if (!user?.uid) return;
-
-  try {
-    setUploading(true);
-    const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-
-    if (auth.currentUser) {
-      await updateProfile(auth.currentUser, { photoURL: downloadURL });
-      await auth.currentUser.reload(); // reload user
-      setUser({ ...auth.currentUser }); // set lại state từ auth.currentUser
-    }
-  } catch (err) {
-    console.error(err);
-    alert("❌ Lỗi khi tải ảnh: " + err.message);
-  } finally {
-    setUploading(false);
-  }
+  // Reset form
+  setSubject("");
+  setTime("");
+  setDay([]);
 };
 
 
-  const handleChangeName = async () => {
-    const newName = prompt("Nhập tên hiển thị mới:", user?.displayName || "");
-    if (!newName || !user) return;
-    try {
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { displayName: newName });
-        await auth.currentUser.reload();
-        setUser(auth.currentUser);
-        alert("✅ Tên hiển thị đã được cập nhật!");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("❌ Lỗi khi đổi tên: " + err.message);
-    }
+  const toggleStatus = async (id) => {
+    const updated = tasks.map((t) =>
+      t.id === id ? { ...t, completed: !t.completed } : t
+    );
+    setTasks(updated);
+    await saveTasksToFirestore(updated);
   };
 
-  if (user === null) return null;
+  const deleteTask = async (id) => {
+    const updated = tasks.filter((t) => t.id !== id);
+    setTasks(updated);
+    await saveTasksToFirestore(updated);
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate("/");
+  };
+
+  if (!user) return null;
 
   return (
     <div className="page">
-      {uploading && (
-        <div className={`uploading-banner`} id="uploadBanner">
-          🔄 Đang cập nhật ảnh đại diện... Vui lòng đợi hoàn tất.
-        </div>
-      )}
-      <div className="header" style={{ width: "80%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+
+      {/* HEADER */}
+      <div className="header" style={{ width: "100%", marginBottom: 20 }}>
         <div>
-          <h1>Xin chào, {user?.displayName || user?.email || "Người dùng"} 👋</h1>
-          <p style={{ opacity: 0.7 }}>Thống kê kế hoạch học tập của bạn 📚</p>
+          <h1>Xin chào, {user.displayName || user.email} 👋</h1>
+          <p style={{ opacity: 0.7 }}>Thống kê kế hoạch học tập 📚</p>
         </div>
-        <div style={{ position: "relative" }} onMouseEnter={() => setShowMenu(true)} onMouseLeave={() => setShowMenu(false)}>
-  <img
-    src="https://cdn-icons-png.flaticon.com/512/1077/1077012.png"
-    alt="avatar"
-    className={`avatar ${uploading ? "updating" : ""}`}
-    title="Tùy chọn tài khoản"
-  />
-  {showMenu && (
-    <div className="dropdown">
-      <label htmlFor="avatar-upload" className="dropdown-item" style={{ display: 'flex', alignItems: 'center' }}>
-        🖼️ Thay đổi ảnh đại diện
-      </label>
-      <input
-        id="avatar-upload"
-        type="file"
-        accept="image/*"
-        onChange={handleAvatarChange}
-        style={{ display: "none" }}
-      />
-      <div className="dropdown-item" onClick={handleChangeName}>✏️ Thay đổi tên hiển thị</div>
-      <div className="dropdown-item logout" onClick={handleLogout}>🚪 Đăng xuất</div>
-    </div>
-  )}
-</div>
-
       </div>
-<h2 style={{ 
-  textAlign: "center", 
-  color: "#2c3e50", 
-  marginBottom: "20px", 
-  fontWeight: "600",
-  fontSize: "22px"
-}}>
-  Lên kế hoạch học tập
-</h2>
 
-<div 
-  className="form" 
-  style={{ 
-    display: "flex", 
-    gap: "12px", 
-    alignItems: "center", 
-    justifyContent: "center",
-    marginBottom: "25px",
-    flexWrap: "wrap"
-  }}
->
-<div className="dropdown-wrapper">
-<DaySelect day={day} setDay={setDay} />
-</div>
+      <h2
+        style={{
+          textAlign: "center",
+          marginBottom: "20px",
+          fontSize: "22px",
+          fontWeight: "600",
+        }}
+      >
+        Lên kế hoạch học tập
+      </h2>
 
+      {/* FORM */}
+      <div className="form" style={{ marginBottom: "25px" }}>
+        {/* MULTI SELECT DAY */}
+        <div className="dropdown-wrapper">
+          <DaySelect day={day} setDay={setDay} />
+        </div>
 
+        <motion.input
+          type="text"
+          placeholder="Môn học..."
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          whileFocus={{ scale: 1.03 }}
+          className="input-box"
+        />
 
- {/* Ô nhập Môn học */}
-<motion.input
-  type="text"
-  placeholder="Môn học..."
-  value={subject}
-  onChange={(e) => setSubject(e.target.value)}
-  whileFocus={{ scale: 1.03, boxShadow: "0 0 0 2px #4CAF50" }}
-  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-  style={{
-    flex: 1,
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #dcdcdc",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
-    fontSize: "14px",
-    outline: "none",
-  }}
-/>
+        <motion.input
+          type="number"
+          placeholder="Thời gian (phút)"
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+          whileFocus={{ scale: 1.03 }}
+          className="input-box"
+        />
 
-{/* Ô nhập Thời gian */}
-<motion.input
-  type="number"
-  placeholder="Thời gian (phút)"
-  value={time}
-  onChange={(e) => setTime(e.target.value)}
-  whileFocus={{ scale: 1.03, boxShadow: "0 0 0 2px #4CAF50" }}
-  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-  style={{
-    width: "160px",
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #dcdcdc",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
-    fontSize: "14px",
-    outline: "none",
-  }}
-/>
+        <button onClick={addTask} className="add-btn">
+          Thêm
+        </button>
+      </div>
 
-
-  <button 
-    onClick={addTask} 
-    style={{ 
-      padding: "10px 20px", 
-      borderRadius: "8px", 
-      backgroundColor: "#4CAF50", 
-      color: "white", 
-      border: "none", 
-      cursor: "pointer",
-      fontWeight: "500",
-      transition: "background 0.3s ease, transform 0.1s ease"
-    }}
-    onMouseOver={(e) => e.target.style.backgroundColor = "#43a047"}
-    onMouseOut={(e) => e.target.style.backgroundColor = "#4CAF50"}
-    onMouseDown={(e) => e.target.style.transform = "scale(0.97)"}
-    onMouseUp={(e) => e.target.style.transform = "scale(1)"}
-  >
-    Thêm
-  </button>
-</div>
-
-
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ backgroundColor: "#f2f2f2" }}>
-            <th>Thứ</th>
-            <th>Môn học</th>
-            <th>Thời gian (phút)</th>
-            <th>Trạng thái</th>
-            <th>Xóa</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((t) => (
-            <tr key={t.id}>
-              <td style={{ textAlign: "center", border: "1px solid #ddd" }}>{t.day}</td>
-              <td style={{ textAlign: "center", border: "1px solid #ddd" }}>{t.subject}</td>
-              <td style={{ textAlign: "center", border: "1px solid #ddd" }}>{t.time}</td>
-              <td style={{ textAlign: "center", border: "1px solid #ddd" }}>
-                <button onClick={() => toggleStatus(t.id)} style={{ padding: "5px 10px", borderRadius: "5px", border: "none", cursor: "pointer", backgroundColor: t.completed ? "#4CAF50" : "#f44336", color: "white" }}>
-                  {t.completed ? "Đã hoàn thành" : "Chưa hoàn thành"}
-                </button>
-              </td>
-              <td style={{ textAlign: "center", border: "1px solid #ddd" }}>
-                <button onClick={() => deleteTask(t.id)}>❌</button>
-              </td>
+      {/* 📌 WRAP TABLE */}
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Thứ</th>
+              <th>Môn học</th>
+              <th>Thời gian (phút)</th>
+              <th>Trạng thái</th>
+              <th>Xóa</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {tasks.map((t) => (
+              <tr key={t.id}>
+                {/* HIỂN THỊ NHIỀU THỨ */}
+                <td>{t.day}</td>
+
+                <td>{t.subject}</td>
+                <td>{t.time}</td>
+
+                <td>
+                  <button
+                    onClick={() => toggleStatus(t.id)}
+                    className={t.completed ? "status-done" : "status-pending"}
+                  >
+                    {t.completed ? "Đã hoàn thành" : "Chưa hoàn thành"}
+                  </button>
+                </td>
+
+                <td>
+                  <button onClick={() => deleteTask(t.id)}>❌</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

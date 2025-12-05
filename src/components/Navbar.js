@@ -1,105 +1,69 @@
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../firebase";
-import React, { useState } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import "./Navbar.css";
 
-export default function Navbar({ tasks, setTasks }) {
+export default function Navbar() {
+  const [shrinkLevel, setShrinkLevel] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [user] = useAuthState(auth);
-  const location = useLocation();
-  const [day, setDay] = useState("");
 
-  const toggleStatus = (id) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      )
-    );
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      if (scrollY > 40) setShrinkLevel(1);
+      else setShrinkLevel(0);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Đăng xuất
+  const logout = () => {
+    auth.signOut();
+    setMenuOpen(false);
   };
 
   return (
-    <nav
-      style={{
-        backdropFilter: "blur(10px)", // glass effect
-        background: "rgba(40, 44, 70, 0.85)",
-        color: "white",
-        padding: "12px 30px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-        position: "sticky",
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      {/* Logo */}
-      <Link
-        to="/"
-        style={{
-          color: "#f8f9fa",
-          textDecoration: "none",
-          fontSize: "22px",
-          fontWeight: "bold",
-          letterSpacing: "0.5px",
-          transition: "0.3s",
-        }}
-        onMouseEnter={(e) => (e.target.style.color = "#80bfff")}
-        onMouseLeave={(e) => (e.target.style.color = "#f8f9fa")}
-      >
-        🎓 Study Planner
+  <>
+    {/* NAVBAR */}
+    <div className={`navbar shrink-${shrinkLevel}`}>
+      
+      {/* MOBILE MENU ICON BÊN TRÁI */}
+      <div className="mobile-menu-icon" onClick={() => setMenuOpen(true)}>
+        ☰
+      </div>
+
+      {/* LOGO */}
+      <div className="nav-left">🎓 Study Planner</div>
+
+      {/* DESKTOP MENU (ẩn trên mobile) */}
+      <div className="nav-right desktop-menu">
+        <Link to="/plan">📘 Lên Kế Hoạch</Link>
+        <Link to="/stats">📊 Thống Kê</Link>
+        <button className="logout-btn" onClick={logout}>🚪 Đăng Xuất</button>
+      </div>
+    </div>
+
+    {/* SIDEBAR MOBILE */}
+    <div className={`sidebar ${menuOpen ? "open" : ""}`}>
+      <div className="sidebar-header">
+        <span className="close-btn" onClick={() => setMenuOpen(false)}>✕</span>
+      </div>
+
+      <Link to="/plan" className="sidebar-item" onClick={() => setMenuOpen(false)}>
+        📘 Lên Kế Hoạch
       </Link>
 
-      {/* Menu */}
-      <div style={{ display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
-        {user ? (
-          <>
-            <Link
-              to="/plan"
-              style={menuLinkStyle}
-            >
-              📘 Lên kế hoạch
-            </Link>
-            <Link
-              to="/stats"
-              style={menuLinkStyle}
-            >
-              📊 Thống kê
-            </Link>
-          </>
-        ) : (
-          location.pathname !== "/" && (
-            <Link
-              to="/"
-              style={{
-                ...menuLinkStyle,
-                backgroundColor: "#4CAF50",
-                padding: "8px 15px",
-                borderRadius: "6px",
-                fontWeight: "600",
-              }}
-              onMouseEnter={(e) => (e.target.style.backgroundColor = "#66bb6a")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#4CAF50")}
-            >
-              🔐 Đăng nhập
-            </Link>
-          )
-        )}
-      </div>
-    </nav>
+      <Link to="/stats" className="sidebar-item" onClick={() => setMenuOpen(false)}>
+        📊 Thống Kê
+      </Link>
+
+      <button className="sidebar-item logout" onClick={logout}>
+        🚪 Đăng Xuất
+      </button>
+    </div>
+  </>
   );
 }
-
-const menuLinkStyle = {
-  color: "white",
-  textDecoration: "none",
-  fontWeight: 500,
-  transition: "all 0.3s ease",
-  padding: "6px 10px",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontSize: "15px",
-  backgroundColor: "transparent",
-  userSelect: "none",
-  onMouseEnter: (e) => e.target.style.backgroundColor = "rgba(128, 191, 255, 0.2)",
-  onMouseLeave: (e) => e.target.style.backgroundColor = "transparent",
-};
